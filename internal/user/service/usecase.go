@@ -3,26 +3,30 @@ package service
 import (
 	"context"
 
+	"github.com/core-go/core"
+
 	"go-service/internal/user/model"
-	"go-service/internal/user/repository"
 )
 
-func NewUserUseCase(repository repository.UserRepository) *UserUseCase {
+func NewUserUseCase(repository core.Repository) *UserUseCase {
 	return &UserUseCase{repository: repository}
 }
 
 type UserUseCase struct {
-	repository repository.UserRepository
+	repository core.Repository
 }
 
-func (s *UserUseCase) All(ctx context.Context) ([]model.User, error) {
-	return s.repository.All(ctx)
-}
 func (s *UserUseCase) Load(ctx context.Context, id string) (*model.User, error) {
-	return s.repository.Load(ctx, id)
+	var user model.User
+	ok, err := s.repository.Get(ctx, id, &user)
+	if !ok {
+		return nil, err
+	} else {
+		return &user, err
+	}
 }
 func (s *UserUseCase) Create(ctx context.Context, user *model.User) (int64, error) {
-	return s.repository.Create(ctx, user)
+	return s.repository.Insert(ctx, user)
 }
 func (s *UserUseCase) Update(ctx context.Context, user *model.User) (int64, error) {
 	return s.repository.Update(ctx, user)
@@ -32,7 +36,4 @@ func (s *UserUseCase) Patch(ctx context.Context, user map[string]interface{}) (i
 }
 func (s *UserUseCase) Delete(ctx context.Context, id string) (int64, error) {
 	return s.repository.Delete(ctx, id)
-}
-func (s *UserUseCase) Search(ctx context.Context, filter *model.UserFilter, limit int64, offset int64) ([]model.User, int64, error) {
-	return s.repository.Search(ctx, filter, limit, offset)
 }

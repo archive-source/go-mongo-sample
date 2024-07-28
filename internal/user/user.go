@@ -2,19 +2,23 @@ package user
 
 import (
 	"context"
+
 	"net/http"
+	"reflect"
+
+	v "github.com/core-go/core/v10"
+	mgo "github.com/core-go/mongo"
+	"github.com/core-go/search"
+	"github.com/core-go/search/mongo/query"
 
 	"go.mongodb.org/mongo-driver/mongo"
 
-	v "github.com/core-go/core/v10"
-
 	"go-service/internal/user/handler"
-	"go-service/internal/user/repository/adapter"
+	"go-service/internal/user/model"
 	"go-service/internal/user/service"
 )
 
 type UserTransport interface {
-	All(w http.ResponseWriter, r *http.Request)
 	Search(w http.ResponseWriter, r *http.Request)
 	Load(w http.ResponseWriter, r *http.Request)
 	Create(w http.ResponseWriter, r *http.Request)
@@ -29,8 +33,11 @@ func NewUserHandler(db *mongo.Database, logError func(context.Context, string, .
 		return nil, err
 	}
 
-	userRepository := adapter.NewUserAdapter(db, adapter.BuildQuery)
+	userType := reflect.TypeOf(model.User{})
+	userQuery := query.UseQuery(userType)
+	userSearchBuilder := mgo.NewSearchBuilder(db, "users", userQuery, search.GetSort)
+	userRepository := mgo.NewRepository(db, "users", userType)
 	userService := service.NewUserUseCase(userRepository)
-	userHandler := handler.NewUserHandler(userService, validator.Validate, logError)
+	userHandler := handler.NewUserHandler(userSearchBuilder.Search, userService, logError, validator.Validate, nil)
 	return userHandler, nil
 }
